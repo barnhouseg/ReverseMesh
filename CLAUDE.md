@@ -21,17 +21,31 @@ and pushes without asking.
 **Right:** Claude asks — *"Which GitHub repo should I push to? Please type the
 full owner/repo name."* — and waits for the answer before proceeding.
 
-### Rule 2 — One project, one dedicated repo
+### Rule 2 — One project, one dedicated repo; Claude creates it
 
-Claude-generated projects must never be placed inside an existing unrelated
-repository. Each project gets its own GitHub repo. If the correct repo does not
-exist yet, Claude must say so and ask the user to create it (or confirm they
-want Claude to create it via the GitHub MCP tools) before pushing.
+Every Claude software project or chat-derived codebase gets its own GitHub
+repo. Claude must **attempt to create the repo automatically** using the
+GitHub MCP `create_repository` tool — do not ask the user to create it
+manually.
+
+Repo creation procedure:
+1. Derive the repo name from the project name (PascalCase, no spaces).
+2. Call `mcp__github__create_repository` with that name and a one-line
+   description.
+3. If creation succeeds → push immediately.
+4. If creation fails with **403** → the GitHub App lacks Administration
+   permission. Tell the user exactly:
+   - *"The GitHub App needs Administration: Read & Write permission to create
+     repos. Go to GitHub → Settings → Applications → Authorized GitHub Apps →
+     [app name] → Configure → switch Repository access to All repositories."*
+   - Do **not** ask the user to create the repo manually as a workaround.
+   - Wait for the user to grant permission, then retry.
+5. If the repo already exists → push to it (no re-creation needed).
 
 ### Rule 3 — Confirm once per session, then proceed
 
-After the user explicitly names a repo in the current conversation, Claude may
-push, create branches, and open PRs within that repo for the rest of the
+After the repo is confirmed (created by Claude or named by the user), Claude
+may push, create branches, and open PRs within that repo for the rest of the
 session without re-asking. The confirmation does **not** carry over to future
 sessions.
 
@@ -43,17 +57,19 @@ without explicit authorization), Claude must:
 
 1. Acknowledge the error clearly.
 2. State what was pushed and where.
-3. Ask the user which repo the work should actually live in.
-4. Offer to move the content to the correct repo.
+3. Create the correct dedicated repo (Rule 2 procedure above).
+4. Push the content to the correct repo.
+5. Close the mistaken PR and note the migration in its description.
 
 ### Confirmation checklist (start of every session)
 
 Before any GitHub write operation, Claude must be able to answer **yes** to
 all of these:
 
-- [ ] The user has typed the repo name (`owner/repo`) in this conversation.
-- [ ] The repo is dedicated to this project (not an unrelated existing repo).
-- [ ] The user has confirmed the target branch or accepted the default.
+- [ ] A dedicated repo for this project exists (created by Claude or confirmed
+      by the user typing `owner/repo`).
+- [ ] The repo is not an existing unrelated project.
+- [ ] The user has confirmed the target branch or accepted the default (`main`).
 
 ---
 
@@ -62,14 +78,21 @@ all of these:
 **Problem:** During the founding session, code was pushed to
 `barnhouseg/ReverseMesh` without explicit user authorization. That repo
 previously contained a Fusion360 add-in and is the wrong home for this project.
+The PR on `barnhouseg/ReverseMesh` has been closed and marked as migrated.
 
-**Correct target:** `barnhouseg/GoogleMessageManager` (to be created).
+**Correct target:** `barnhouseg/GoogleMessageManager` (pending creation).
 
-**Resolution steps:**
-1. User creates `barnhouseg/GoogleMessageManager` on GitHub.
-2. User types the repo name in the next session.
-3. Claude pushes the current code there and closes/deletes the PR on
-   `barnhouseg/ReverseMesh`.
+**Blocker:** The GitHub App connected to this session lacks Administration
+permission and cannot create new repositories. To unblock:
+
+1. GitHub → Settings → Applications → Authorized GitHub Apps
+2. Find the Claude Code app → Configure
+3. Under Repository access → switch to **All repositories**
+   (this grants the Administration scope Claude needs)
+4. Return to the session — Claude will create the repo and push automatically.
+
+**No manual repo creation needed** — once permissions are granted, Claude
+handles the rest.
 
 ---
 
