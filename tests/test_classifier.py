@@ -2,8 +2,8 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from messages_manager.models import Thread
-from messages_manager.classifier import SenderKind, classify_thread, reclassify_with_full_thread
+from GoogleMessageManager.models import Thread
+from GoogleMessageManager.classifier import SenderKind, classify_thread, reclassify_with_full_thread
 
 
 def _thread(sender: str, preview: str = "", unread: bool = False) -> Thread:
@@ -110,7 +110,7 @@ def test_automated_with_reply_becomes_contact():
 # ── Safelist ──────────────────────────────────────────────────────────────────
 
 def test_safelist_overrides_short_code(monkeypatch):
-    import messages_manager.config as cfg
+    import GoogleMessageManager.config as cfg
     monkeypatch.setattr(cfg, "CONTACT_SAFELIST", ["73741"])
     clsn = classify_thread(_thread("73741"))
     assert clsn.kind == SenderKind.CONTACT

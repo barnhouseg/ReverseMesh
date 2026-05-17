@@ -1,40 +1,75 @@
-# Reverse [Deprecated]
+# GoogleMessageManager
 
-**This extension currently does not work due to relying on external libaraies broken in a recen fusion update, and will likely remain that way. If you know your way around python and importing modules you can find more information here:**
-https://github.com/NicoSchlueter/Reverse/issues/3#issuecomment-1429808075
+Automates inbox hygiene for **Google Messages Web** (messages.google.com).
 
-Add-In for Autodesk Fusion360.    
-Reconstructs BRep Surfaces from mesh points.    
-Generates geometry very close to the original source file, generally within 1e-6mm.
+Treats your SMS inbox like email — deletes automated messages, never touches
+real contacts, and surfaces questions and invitations that need your attention.
 
-# Use
+## Quick start
 
-![img1](https://user-images.githubusercontent.com/30301307/90188610-1094d180-ddbc-11ea-89c6-c5ea7fb4536e.jpg)
+```bash
+pip install playwright
+playwright install chromium
 
-1. Import the mesh to be reconstructed
-2. Activate the command for the desired feature type. Select the mesh and select mesh points belonging to that feature.
-  - All points within the selection radius around the click position will be selected, even hidden ones.
-  - Hold shift to deselect points.
-  - Adjust the selection radius to select just the points you want.
-  - Points not belonging to the feature you are reconstructing significantly degrade the accuracy. Keep an eye on the selection count to make sure you are not accidentally selecting undesired points.  
-  - Press OK to create the surface
-3. Repeat step 2 for all features of the part
-4. Use Boundary fill to turn the enclosed volume into a solid
+# Dry run — classify and report, no deletions:
+python run.py
 
-# Supported Features
-- Cylinders
-- Planes
+# Live — delete automated threads (prompts before each):
+python run.py --live
+```
 
-# Installation
+On first run the browser opens and shows the QR pairing screen.  Scan it from
+your phone: **Messages → ⋮ → Device Pairing**.  The session is saved to
+`~/.GoogleMessageManager/` so subsequent runs skip the QR step.
 
-* Download the Project as ZIP and extract it somewhere you can find again, but won't bother you. (or use git to clone it there)
-* Open Fusion360 and press ADD-INS > Scripts and Add-ins
-* Select the tab Add-Ins and click the green plus symbol next to "My Add-Ins"
-* Navigate to the extracted Project folder and hit open
-* The Add-in should now appear in the "My Add-Ins" list. Select it in the list. If desired check the "Run on Startup" checkbox and hit run.
-* The Commands will appear as SURFACE > CREATE
+## What it does
 
-# Changelog
+| Thread type | Action |
+|---|---|
+| Short-code sender (5–6 digits) | Deleted |
+| ALL-CAPS / brand+digit sender (e.g. `USBANK`, `Amazon1`) | Deleted |
+| Known automated content (OTP, STOP footer, promo) | Deleted |
+| Contact with a question | Flagged in report |
+| Contact with an invitation / event | Flagged in report |
+| Everything else | Left untouched |
 
-## 1.0 Plane & Cylinder
-- Added support for planes and cylinders
+## Flags
+
+```
+--live          Actually delete (default is dry run)
+--no-confirm    Skip per-deletion prompts
+--deep          Read full thread before deciding (catches replied-to bots)
+--headless      Run without a visible browser window
+```
+
+## Configuration
+
+All tuning is in `GoogleMessageManager/config.py`:
+
+- `CONTACT_SAFELIST` — numbers/names that are never deleted
+- `AUTOMATED_CONTENT_PATTERNS` — substring patterns that flag a thread
+- `QUESTION_INDICATORS` / `INVITATION_INDICATORS` — detection phrases
+
+See `CLAUDE.md` for the full customisation guide and recommended workflows.
+
+## Tests
+
+```bash
+python -m pytest tests/test_classifier.py -v   # 19 tests, no browser needed
+```
+
+## Project layout
+
+```
+run.py
+GoogleMessageManager/
+├── config.py       ← all tunable settings
+├── models.py       ← Thread / Message dataclasses
+├── classifier.py   ← classification + question/invitation detection
+├── browser.py      ← Playwright session management
+├── processor.py    ← orchestration pipeline
+└── reporter.py     ← report formatting + recommendations
+tests/
+└── test_classifier.py
+CLAUDE.md           ← full project skills file
+```
