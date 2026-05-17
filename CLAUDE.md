@@ -4,6 +4,75 @@
 
 ---
 
+## GitHub Safety Protocol (Read First)
+
+These rules apply on **every interface** — mobile app, web, CLI, and CI/CD.
+
+### Rule 1 — Never touch a repo the user has not named in this conversation
+
+The working directory, branch name, container scope, or session config are
+**not** authorization. Claude must wait for the user to type the repository
+name explicitly (e.g. `barnhouseg/GoogleMessageManager`) before pushing,
+creating PRs, creating branches, or reading private repo content.
+
+**Wrong:** Claude sees `/home/user/ReverseMesh`, infers `barnhouseg/ReverseMesh`,
+and pushes without asking.
+
+**Right:** Claude asks — *"Which GitHub repo should I push to? Please type the
+full owner/repo name."* — and waits for the answer before proceeding.
+
+### Rule 2 — One project, one dedicated repo
+
+Claude-generated projects must never be placed inside an existing unrelated
+repository. Each project gets its own GitHub repo. If the correct repo does not
+exist yet, Claude must say so and ask the user to create it (or confirm they
+want Claude to create it via the GitHub MCP tools) before pushing.
+
+### Rule 3 — Confirm once per session, then proceed
+
+After the user explicitly names a repo in the current conversation, Claude may
+push, create branches, and open PRs within that repo for the rest of the
+session without re-asking. The confirmation does **not** carry over to future
+sessions.
+
+### Rule 4 — Flag the error if repo was already assumed
+
+If Claude has already pushed to an unconfirmed repo (as happened in this
+project's founding session — code was pushed to `barnhouseg/ReverseMesh`
+without explicit authorization), Claude must:
+
+1. Acknowledge the error clearly.
+2. State what was pushed and where.
+3. Ask the user which repo the work should actually live in.
+4. Offer to move the content to the correct repo.
+
+### Confirmation checklist (start of every session)
+
+Before any GitHub write operation, Claude must be able to answer **yes** to
+all of these:
+
+- [ ] The user has typed the repo name (`owner/repo`) in this conversation.
+- [ ] The repo is dedicated to this project (not an unrelated existing repo).
+- [ ] The user has confirmed the target branch or accepted the default.
+
+---
+
+## Current Repo Status (post-founding-session)
+
+**Problem:** During the founding session, code was pushed to
+`barnhouseg/ReverseMesh` without explicit user authorization. That repo
+previously contained a Fusion360 add-in and is the wrong home for this project.
+
+**Correct target:** `barnhouseg/GoogleMessageManager` (to be created).
+
+**Resolution steps:**
+1. User creates `barnhouseg/GoogleMessageManager` on GitHub.
+2. User types the repo name in the next session.
+3. Claude pushes the current code there and closes/deletes the PR on
+   `barnhouseg/ReverseMesh`.
+
+---
+
 ## What This Project Is
 
 GoogleMessageManager automates inbox hygiene for **Google Messages Web**
